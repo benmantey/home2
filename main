@@ -1,0 +1,100 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <stdbool.h>
+#include <string.h>
+#include <math.h>
+
+// Функция, которая проверяет, является ли символ оператором
+bool is_operator(char ch) {
+    return ch == '+' || ch == '-' || ch == '*' || ch == '/';
+}
+
+// Функция, которая проверяет, является ли символ скобкой
+bool is_bracket(char ch) {
+    return ch == '(' || ch == ')';
+}
+
+// Функция, которая возвращает приоритет оператора
+int precedence(char op) {
+    if (op == '+' || op == '-')
+        return 1;
+    if (op == '*' || op == '/')
+        return 2;
+    return 0;
+}
+
+// Функция для выполнения операции над двумя операндами и оператором
+double apply_operator(double a, double b, char op) {
+    switch (op) {
+        case '+': return a + b;
+        case '-': return a - b;
+        case '*': return a * b;
+        case '/': return a / b;
+        default: return 0;
+    }
+}
+
+// Функция для вычисления выражения
+double calculate_expression(const char* expression) {
+    int len = strlen(expression);
+    char operators[len];
+    double values[len];
+    int op_index = -1;
+    int val_index = -1;
+
+    for (int i = 0; i < len; i++) {
+        if (expression[i] == ' ') {
+            continue;
+        }
+        if (isdigit(expression[i])) {
+            double num = 0;
+            while (i < len && (isdigit(expression[i]) || expression[i] == '.')) {
+                num = num * 10 + (expression[i] - '0');
+                i++;
+            }
+            i--;
+            values[++val_index] = num;
+        } else if (expression[i] == '(') {
+            operators[++op_index] = expression[i];
+        } else if (expression[i] == ')') {
+            while (op_index != -1 && operators[op_index] != '(') {
+                double val2 = values[val_index--];
+                double val1 = values[val_index--];
+                char op = operators[op_index--];
+                values[++val_index] = apply_operator(val1, val2, op);
+            }
+            op_index--; // Удаляем открывающую скобку из стека операторов
+        } else if (is_operator(expression[i])) {
+            char current_op = expression[i];
+            while (op_index != -1 && precedence(operators[op_index]) >= precedence(current_op)) {
+                double val2 = values[val_index--];
+                double val1 = values[val_index--];
+                char op = operators[op_index--];
+                values[++val_index] = apply_operator(val1, val2, op);
+            }
+            operators[++op_index] = current_op;
+        }
+    }
+
+    while (op_index != -1) {
+        double val2 = values[val_index--];
+        double val1 = values[val_index--];
+        char op = operators[op_index--];
+        values[++val_index] = apply_operator(val1, val2, op);
+    }
+
+    return values[val_index];
+}
+
+int main() {
+    const char* expression1 = "2 + 3 * 5";
+    const char* expression2 = "(10 - 5) / 2";
+    const char* expression3 = "1 / 0";
+
+    printf("%f\n", calculate_expression(expression1)); // Output: 17.000000
+    printf("%f\n", calculate_expression(expression2)); // Output: 2.500000
+    printf("%f\n", calculate_expression(expression3)); // Output: Infinity
+
+    return 0;
+}
